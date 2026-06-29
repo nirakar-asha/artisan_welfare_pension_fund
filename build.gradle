@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.5.16'
 	id 'io.spring.dependency-management' version '1.1.7'
+	id 'com.github.node-gradle.node' version '7.0.2'
 }
 
 group = 'org.khadi'
@@ -20,6 +21,37 @@ tasks.named("processResources") {
 repositories {
 	mavenCentral()
 }
+
+node {
+	version = '24.18.0'
+	download = true
+}
+
+def frontendDir = "$projectDir/src/main/resources/web"
+def staticDir = "$projectDir/src/main/resources/static"
+def angularDistDir = "$frontendDir/dist"
+
+tasks.register("cleanAngularDist", Delete) {
+	delete staticDir
+	delete angularDistDir
+}
+
+tasks.named("clean") {
+	dependsOn "cleanAngularDist"
+}
+
+tasks.register("ngBuild", com.github.gradle.node.npm.task.NpmTask) {
+	workingDir = file(frontendDir)
+	args = ['run', 'build']
+}
+
+tasks.register("copyAngularDist", Copy) {
+	dependsOn "ngBuild"
+	from "$frontendDir/dist/browser"
+	into "$projectDir/src/main/resources/static"
+}
+
+processResources.dependsOn "copyAngularDist"
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
